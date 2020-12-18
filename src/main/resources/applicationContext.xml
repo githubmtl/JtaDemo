@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context" xmlns:tx="http://www.springframework.org/schema/tx"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/context https://www.springframework.org/schema/context/spring-context.xsd http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx.xsd">
+    <context:property-placeholder location="classpath:db.properties"></context:property-placeholder>
+    <context:component-scan base-package="com.mtl.demo.jta.service"></context:component-scan>
+    <!-- 配置XA数据源1 -->
+    <bean id="ds1" class="com.atomikos.jdbc.AtomikosDataSourceBean" init-method="init" destroy-method="close">
+        <property name="uniqueResourceName" value="db1"/>
+        <property name="xaDataSourceClassName" value="com.alibaba.druid.pool.xa.DruidXADataSource"/>
+        <property name="xaProperties">
+            <props>
+                <prop key="driverClassName">${jdbc.driver}</prop>
+                <prop key="url">${db1.jdbc.url}</prop>
+                <prop key="username">${jdbc.user}</prop>
+                <prop key="password">${jdbc.password}</prop>
+            </props>
+        </property>
+    </bean>
+    <!-- 配置XA数据源2 -->
+    <bean id="ds2" class="com.atomikos.jdbc.AtomikosDataSourceBean" init-method="init" destroy-method="close">
+        <property name="uniqueResourceName" value="db2"/>
+        <property name="xaDataSourceClassName" value="com.alibaba.druid.pool.xa.DruidXADataSource"/>
+        <property name="xaProperties">
+            <props>
+                <prop key="driverClassName">${jdbc.driver}</prop>
+                <prop key="url">${db2.jdbc.url}</prop>
+                <prop key="username">${jdbc.user}</prop>
+                <prop key="password">${jdbc.password}</prop>
+            </props>
+        </property>
+    </bean>
+    <!-- 配置数据库操作类 -->
+    <bean id="jdbcTemplate1" class="org.springframework.jdbc.core.JdbcTemplate">
+        <property name="dataSource" ref="ds1"/>
+    </bean>
+    <bean id="jdbcTemplate2" class="org.springframework.jdbc.core.JdbcTemplate">
+        <property name="dataSource" ref="ds2"/>
+    </bean>
+    <!-- XA事务管理 -->
+    <bean id="userTransactionManager" class="com.atomikos.icatch.jta.UserTransactionManager">
+        <property name="forceShutdown" value="true"/>
+        <property name="transactionTimeout" value="10"/>
+    </bean>
+    <!-- Spring本身不提供事务，所以依赖外界事务实现 -->
+    <bean id="transactionManager" class="org.springframework.transaction.jta.JtaTransactionManager">
+        <property name="transactionManager" ref="userTransactionManager"/>
+    </bean>
+    <!-- 注解驱动事务 -->
+    <tx:annotation-driven transaction-manager="transactionManager"></tx:annotation-driven>
+</beans>
